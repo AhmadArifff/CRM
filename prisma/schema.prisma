@@ -58,13 +58,13 @@ model Tenant {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  users     User[]
-  companies Company[]
-  contacts  Contact[]
-  pipelines Pipeline[]
-  deals     Deal[]
+  users      User[]
+  companies  Company[]
+  contacts   Contact[]
+  pipelines  Pipeline[]
+  deals      Deal[]
   activities Activity[]
-  projects  Project[]
+  projects   Project[]
 
   @@map("tenants")
 }
@@ -242,12 +242,47 @@ model ProjectTask {
   status      TaskStatus    @default(TODO)
   priority    PriorityLevel @default(MEDIUM)
   dueDate     DateTime?     @map("due_date") @db.Date
+  coverImage  String?       @map("cover_image") @db.Text
+  tagText     String?       @map("tag_text") @db.VarChar(100)
+  tagColor    String?       @map("tag_color") @db.VarChar(50)
+  isWatched   Boolean       @default(false) @map("is_watched")
+  isOverdue   Boolean       @default(false) @map("is_overdue")
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
-  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignedRep User?         @relation("ProjectTaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+  project     Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedRep User?                   @relation("ProjectTaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+  attachments ProjectTaskAttachment[]
+  checklists  ProjectTaskChecklist[]
 
   @@index([projectId, status])
   @@map("project_tasks")
+}
+
+model ProjectTaskAttachment {
+  id        String   @id @default(uuid()) @db.Uuid
+  taskId    String   @map("task_id") @db.Uuid
+  fileName  String   @map("file_name") @db.VarChar(255)
+  fileUrl   String   @map("file_url") @db.Text
+  fileType  String   @map("file_type") @db.VarChar(100)
+  fileSize  Int?     @map("file_size")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task ProjectTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("project_task_attachments")
+}
+
+model ProjectTaskChecklist {
+  id          String   @id @default(uuid()) @db.Uuid
+  taskId      String   @map("task_id") @db.Uuid
+  itemText    String   @map("item_text") @db.VarChar(255)
+  isCompleted Boolean  @default(false) @map("is_completed")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  task ProjectTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("project_task_checklists")
 }

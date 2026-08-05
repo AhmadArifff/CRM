@@ -13,21 +13,49 @@ export async function GET(
       where: { projectId },
       include: {
         assignedRep: true,
+        attachments: true,
+        checklists: true,
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    const formatted = tasks.map((t) => ({
-      id: t.id,
-      projectId: t.projectId,
-      title: t.title,
-      description: t.description || '',
-      status: t.status,
-      priority: t.priority,
-      assignedTo: t.assignedRep?.name || 'Ahmad Ariff',
-      dueDate: t.dueDate ? t.dueDate.toISOString().split('T')[0] : '2026-08-30',
-      createdAt: t.createdAt.toISOString().split('T')[0],
-    }));
+    const formatted = tasks.map((t) => {
+      const checklistTotal = t.checklists.length;
+      const checklistCompleted = t.checklists.filter((c) => c.isCompleted).length;
+
+      return {
+        id: t.id,
+        projectId: t.projectId,
+        title: t.title,
+        description: t.description || '',
+        status: t.status,
+        priority: t.priority,
+        assignedTo: t.assignedRep?.name || 'Ahmad Ariff',
+        dueDate: t.dueDate ? t.dueDate.toISOString().split('T')[0] : '2026-08-30',
+        coverImage: t.coverImage || '',
+        tagText: t.tagText || 'Feature',
+        tagColor: t.tagColor || 'bg-[#C9372C]',
+        isWatched: t.isWatched,
+        isOverdue: t.isOverdue,
+        commentsCount: 1,
+        attachmentsCount: t.attachments.length,
+        checklistTotal,
+        checklistCompleted,
+        createdAt: t.createdAt.toISOString().split('T')[0],
+        attachments: t.attachments.map((a) => ({
+          id: a.id,
+          fileName: a.fileName,
+          fileUrl: a.fileUrl,
+          fileType: a.fileType,
+          fileSize: a.fileSize,
+        })),
+        checklists: t.checklists.map((c) => ({
+          id: c.id,
+          itemText: c.itemText,
+          isCompleted: c.isCompleted,
+        })),
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -49,7 +77,7 @@ export async function POST(
   try {
     const { id: projectId } = await params;
     const body = await request.json();
-    const { title, description, status, priority, assignedTo, dueDate } = body;
+    const { title, description, status, priority, assignedTo, dueDate, coverImage, tagText, tagColor } = body;
 
     const validStatus: TaskStatus = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'].includes(status)
       ? status
@@ -59,11 +87,18 @@ export async function POST(
       data: {
         projectId,
         title: title || 'Task Baru',
-        description: description || 'Deskripsi pekerjaan tugas proyek',
+        description: description || '',
         status: validStatus,
         priority: priority || 'MEDIUM',
         assignedTo: '11111111-1111-1111-1111-111111111111',
         dueDate: dueDate ? new Date(dueDate) : new Date('2026-08-20'),
+        coverImage: coverImage || '',
+        tagText: tagText || 'Feature',
+        tagColor: tagColor || 'bg-blue-500',
+      },
+      include: {
+        attachments: true,
+        checklists: true,
       },
     });
 
@@ -79,7 +114,18 @@ export async function POST(
           priority: newTask.priority,
           assignedTo: assignedTo || 'Ahmad Ariff',
           dueDate: newTask.dueDate ? newTask.dueDate.toISOString().split('T')[0] : '2026-08-20',
+          coverImage: newTask.coverImage || '',
+          tagText: newTask.tagText || 'Feature',
+          tagColor: newTask.tagColor || 'bg-blue-500',
+          isWatched: false,
+          isOverdue: false,
+          commentsCount: 0,
+          attachmentsCount: 0,
+          checklistTotal: 0,
+          checklistCompleted: 0,
           createdAt: newTask.createdAt.toISOString().split('T')[0],
+          attachments: [],
+          checklists: [],
         },
         message: 'Task Trello baru berhasil disimpan ke Supabase database',
       },
@@ -89,41 +135,6 @@ export async function POST(
     console.error('Error creating project task in Supabase:', error);
     return NextResponse.json(
       { success: false, error: { code: 'CREATE_FAILED', message: 'Gagal membuat task baru' } },
-      { status: 400 }
-    );
-  }
-}
-
-export async function PATCH(request: Request) {
-  try {
-    const body = await request.json();
-    const { taskId, status } = body;
-
-    if (!taskId) {
-      return NextResponse.json(
-        { success: false, error: { code: 'BAD_REQUEST', message: 'taskId diperlukan' } },
-        { status: 400 }
-      );
-    }
-
-    const validStatus: TaskStatus = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'].includes(status)
-      ? status
-      : 'TODO';
-
-    const updated = await prisma.projectTask.update({
-      where: { id: taskId },
-      data: { status: validStatus },
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: updated,
-      message: 'Status Trello task berhasil diperbarui di Supabase database',
-    });
-  } catch (error) {
-    console.error('Error updating task status in Supabase:', error);
-    return NextResponse.json(
-      { success: false, error: { code: 'UPDATE_FAILED', message: 'Gagal memperbarui status task' } },
       { status: 400 }
     );
   }

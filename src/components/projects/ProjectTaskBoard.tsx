@@ -32,11 +32,15 @@ import {
 } from 'lucide-react';
 import { Project, ProjectTask, TaskColumnStatus } from '../../types/crm';
 
+import { TrelloCardDetailModal } from './TrelloCardDetailModal';
+
 interface ProjectTaskBoardProps {
   projects: Project[];
   tasks: ProjectTask[];
   onMoveTask: (taskId: string, newStatus: TaskColumnStatus) => void;
   onAddTask: (newTask: Omit<ProjectTask, 'id' | 'createdAt' | 'projectId'>) => void;
+  onUpdateTaskDetail?: (taskId: string, updates: any) => void;
+  onDeleteTask?: (taskId: string) => void;
   selectedProjectId: string;
   onSelectProject: (projectId: string) => void;
   salesReps: string[];
@@ -47,6 +51,8 @@ export const ProjectTaskBoard: React.FC<ProjectTaskBoardProps> = ({
   tasks,
   onMoveTask,
   onAddTask,
+  onUpdateTaskDetail,
+  onDeleteTask,
   selectedProjectId,
   onSelectProject,
   salesReps,
@@ -55,6 +61,7 @@ export const ProjectTaskBoard: React.FC<ProjectTaskBoardProps> = ({
   const [showLeftCalendar, setShowLeftCalendar] = useState(true);
   const [showFilterBanner, setShowFilterBanner] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [activeDetailTask, setActiveDetailTask] = useState<ProjectTask | null>(null);
   const [addToColumn, setAddToColumn] = useState<string>('TODO');
   const [inlineAddColumn, setInlineAddColumn] = useState<string | null>(null);
   const [inlineTitle, setInlineTitle] = useState('');
@@ -431,6 +438,7 @@ export const ProjectTaskBoard: React.FC<ProjectTaskBoardProps> = ({
                   {colCards.map((card) => (
                     <div
                       key={card.id}
+                      onClick={() => setActiveDetailTask(card as any)}
                       className="bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200/80 overflow-hidden cursor-pointer group transition-all hover:ring-2 hover:ring-[#0052CC]/50"
                     >
                       {/* Cover Screenshot Image (if available) */}
@@ -758,6 +766,26 @@ export const ProjectTaskBoard: React.FC<ProjectTaskBoardProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* ── 7. Trello Card Detail Modal ── */}
+      {activeDetailTask && (
+        <TrelloCardDetailModal
+          task={activeDetailTask}
+          isOpen={!!activeDetailTask}
+          onClose={() => setActiveDetailTask(null)}
+          onUpdateTask={(updates) => {
+            if (onUpdateTaskDetail && activeDetailTask) {
+              onUpdateTaskDetail(activeDetailTask.id, updates);
+            }
+          }}
+          onDeleteTask={(taskId) => {
+            if (onDeleteTask) {
+              onDeleteTask(taskId);
+            }
+          }}
+          salesReps={salesReps}
+        />
       )}
     </div>
   );

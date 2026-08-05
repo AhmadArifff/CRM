@@ -121,7 +121,7 @@ export const apiClient = {
     return await res.json();
   },
 
-  async createProjectTask(projectId: string, newTask: Omit<ProjectTask, 'id' | 'createdAt' | 'projectId'>): Promise<ApiResponse<ProjectTask>> {
+  async createProjectTask(projectId: string, newTask: Partial<ProjectTask>): Promise<ApiResponse<ProjectTask>> {
     const res = await fetch(`/api/v1/projects/${projectId}/tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -130,16 +130,34 @@ export const apiClient = {
     return await res.json();
   },
 
-  async updateProjectTaskStatus(taskId: string, status: TaskColumnStatus): Promise<ApiResponse<ProjectTask>> {
-    const res = await fetch(`/api/v1/projects/task/status`, {
+  async updateProjectTaskDetail(projectId: string, taskId: string, updates: any): Promise<ApiResponse<ProjectTask>> {
+    const res = await fetch(`/api/v1/projects/${projectId}/tasks/${taskId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taskId, status }),
+      body: JSON.stringify(updates),
     });
     return await res.json();
   },
 
-  // 6. ANALYTICS SUMMARY API
+  async deleteProjectTask(projectId: string, taskId: string): Promise<ApiResponse<void>> {
+    const res = await fetch(`/api/v1/projects/${projectId}/tasks/${taskId}`, {
+      method: 'DELETE',
+    });
+    return await res.json();
+  },
+
+  // 6. FILE UPLOAD API
+  async uploadFile(file: File): Promise<ApiResponse<{ fileName: string; fileUrl: string; fileType: string; fileSize: number }>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/v1/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    return await res.json();
+  },
+
+  // 7. ANALYTICS SUMMARY API
   async getAnalyticsSummary(): Promise<ApiResponse<{ kpis: KpiMetric[]; activePipelineValue: number }>> {
     const res = await fetch('/api/v1/analytics/summary');
     return await res.json();

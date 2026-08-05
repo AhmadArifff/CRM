@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding Supabase Cloud PostgreSQL Database...');
+  console.log('🌱 Seeding Supabase Cloud PostgreSQL Database with Trello Cards & Attachments...');
 
   // 1. Create Default Tenant
   const tenant = await prisma.tenant.upsert({
@@ -165,23 +165,6 @@ async function main() {
     },
   });
 
-  const cnt3 = await prisma.contact.upsert({
-    where: { id: '55555555-5555-5555-5555-000000000003' },
-    update: {},
-    create: {
-      id: '55555555-5555-5555-5555-000000000003',
-      tenantId: tenant.id,
-      companyId: c3.id,
-      assignedTo: u3.id,
-      name: 'Bambang Wijaya',
-      email: 'bambang.w@shopee.com',
-      phone: '+62 813-1122-3344',
-      role: 'Procurement Manager',
-      status: 'NEW',
-      value: 450000000,
-    },
-  });
-
   // 6. Create Deals
   const d1 = await prisma.deal.upsert({
     where: { id: '66666666-6666-6666-6666-000000000001' },
@@ -199,22 +182,6 @@ async function main() {
     },
   });
 
-  const d2 = await prisma.deal.upsert({
-    where: { id: '66666666-6666-6666-6666-000000000002' },
-    update: {},
-    create: {
-      id: '66666666-6666-6666-6666-000000000002',
-      tenantId: tenant.id,
-      stageId: '33333333-3333-3333-3333-000000000003',
-      companyId: c2.id,
-      contactId: cnt2.id,
-      ownerId: u2.id,
-      title: 'Implementasi Core Banking System',
-      value: 1200000000,
-      expectedCloseDate: new Date('2026-09-15'),
-    },
-  });
-
   // 7. Create Post-Sales Projects & Trello Task Cards
   const p1 = await prisma.project.upsert({
     where: { id: '88888888-8888-8888-8888-000000000001' },
@@ -229,106 +196,71 @@ async function main() {
     },
   });
 
-  const p2 = await prisma.project.upsert({
-    where: { id: '88888888-8888-8888-8888-000000000002' },
+  // Rich Trello Tasks
+  const t1 = await prisma.projectTask.upsert({
+    where: { id: '99999999-9999-9999-9999-000000000001' },
     update: {},
     create: {
-      id: '88888888-8888-8888-8888-000000000002',
-      tenantId: tenant.id,
-      dealId: d2.id,
-      name: 'Core Banking API Integration Project',
-      description: 'Pengembangan ISO20022 Gateway & Open Banking API Connector Bank Mandiri',
-      status: 'IN_DEVELOPMENT',
-    },
-  });
-
-  // Tasks for Project 1 (Trello Cards)
-  const p1Tasks = [
-    {
       id: '99999999-9999-9999-9999-000000000001',
-      title: 'Audit Hardware Rack Server & Spesifikasi PSU 2000W',
-      description: 'Cek fisik dan kelayakan pasokan listrik 3-phase di Data Center BSD',
-      status: 'DONE' as const,
-      priority: 'HIGH' as const,
+      projectId: p1.id,
+      title: 'Setting nilai konsesi bandara',
+      description: 'Konfigurasi persentase tarif konsesi bandara di modul reservasi',
+      status: 'REVIEW',
+      priority: 'HIGH',
       assignedTo: u1.id,
+      dueDate: new Date('2026-08-10'),
+      coverImage: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80',
+      tagText: 'Reservasi',
+      tagColor: 'bg-[#C9372C]',
+      isWatched: true,
     },
-    {
+  });
+
+  const t2 = await prisma.projectTask.upsert({
+    where: { id: '99999999-9999-9999-9999-000000000002' },
+    update: {},
+    create: {
       id: '99999999-9999-9999-9999-000000000002',
-      title: 'Install Ubuntu Server 24.04 LTS & Setup K3s Cluster',
-      description: 'Konfigurasi 5 Master Nodes dan 10 Worker Nodes K3s di cloud privat',
-      status: 'IN_PROGRESS' as const,
-      priority: 'HIGH' as const,
-      assignedTo: u1.id,
-    },
-    {
-      id: '99999999-9999-9999-9999-000000000003',
-      title: 'Stress Test Benchmark CPU & RAM 256GB Under Full Load',
-      description: 'Simulasi load 50,000 concurrent user requests selama 48 jam nonstop',
-      status: 'REVIEW' as const,
-      priority: 'MEDIUM' as const,
+      projectId: p1.id,
+      title: 'Kamis 30-7-2026 (tes semua proses reservasi surjaya)',
+      description: 'Pengujian end-to-end booking tiket & reservasi penerbangan',
+      status: 'DONE',
+      priority: 'HIGH',
       assignedTo: u2.id,
+      dueDate: new Date('2026-07-30'),
+      coverImage: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=600&auto=format&fit=crop&q=80',
+      tagText: 'BAST Selesai',
+      tagColor: 'bg-[#C9372C]',
+      isOverdue: true,
     },
-    {
-      id: '99999999-9999-9999-9999-000000000004',
-      title: 'Serah Terima Dokumen SLA Uptime 99.99% ke VP Infrastructure',
-      description: 'Penandatanganan berita acara serah terima (BAST) bersama Pak Budi',
-      status: 'TODO' as const,
-      priority: 'HIGH' as const,
-      assignedTo: u3.id,
-    },
-  ];
+  });
 
-  for (const t of p1Tasks) {
-    await prisma.projectTask.upsert({
-      where: { id: t.id },
-      update: {},
-      create: {
-        id: t.id,
-        projectId: p1.id,
-        title: t.title,
-        description: t.description,
-        status: t.status,
-        priority: t.priority,
-        assignedTo: t.assignedTo,
-        dueDate: new Date('2026-08-15'),
+  // Seed Checklists for Task 1
+  await prisma.projectTaskChecklist.createMany({
+    data: [
+      { id: 'c1111111-1111-1111-1111-000000000001', taskId: t1.id, itemText: 'Audit kelayakan pasokan listrik 3-phase', isCompleted: true },
+      { id: 'c1111111-1111-1111-1111-000000000002', taskId: t1.id, itemText: 'Setup K3s Master Nodes & Worker Nodes', isCompleted: true },
+      { id: 'c1111111-1111-1111-1111-000000000003', taskId: t1.id, itemText: 'Konfigurasi Load Balancer & SSL Cert', isCompleted: true },
+    ],
+    skipDuplicates: true,
+  });
+
+  // Seed Attachments for Task 1
+  await prisma.projectTaskAttachment.createMany({
+    data: [
+      {
+        id: 'a1111111-1111-1111-1111-000000000001',
+        taskId: t1.id,
+        fileName: 'spesifikasi_server_telkom.pdf',
+        fileUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        fileType: 'application/pdf',
+        fileSize: 1024500,
       },
-    });
-  }
-
-  // 8. Create Activities
-  await prisma.activity.upsert({
-    where: { id: '77777777-7777-7777-7777-000000000001' },
-    update: {},
-    create: {
-      id: '77777777-7777-7777-7777-000000000001',
-      tenantId: tenant.id,
-      userId: u1.id,
-      contactId: cnt1.id,
-      type: 'MEETING',
-      subject: 'Meeting Presentasi Final Proposal & SLA Server',
-      description: 'Diskusi detail spesifikasi teknis dan jaminan uptime 99.99%',
-      dueDate: new Date('2026-08-06'),
-      isCompleted: false,
-    },
+    ],
+    skipDuplicates: true,
   });
 
-  await prisma.activity.upsert({
-    where: { id: '77777777-7777-7777-7777-000000000002' },
-    update: {},
-    create: {
-      id: '77777777-7777-7777-7777-000000000002',
-      tenantId: tenant.id,
-      userId: u2.id,
-      contactId: cnt2.id,
-      type: 'CALL',
-      subject: 'Telepon Konfirmasi Penawaran Harga Core Banking',
-      description: 'Follow-up persetujuan jajaran direksi Bank Mandiri',
-      dueDate: new Date('2026-08-05'),
-      isCompleted: true,
-    },
-  });
-
-  console.log('✅ Supabase Database Seeding Complete with Projects & Trello Tasks!');
+  console.log('✅ Supabase Database Seeding Complete with Attachments & Checklists!');
 }
 
 main()

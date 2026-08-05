@@ -79,6 +79,20 @@ export interface Activity {
 
 export type TaskColumnStatus = 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE';
 
+export interface TaskAttachment {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize?: number;
+}
+
+export interface TaskCheckitem {
+  id: string;
+  itemText: string;
+  isCompleted: boolean;
+}
+
 export interface ProjectTask {
   id: string;
   projectId: string;
@@ -99,6 +113,8 @@ export interface ProjectTask {
   isWatched?: boolean;
   isOverdue?: boolean;
   members?: string[];
+  attachments?: TaskAttachment[];
+  checklists?: TaskCheckitem[];
 }
 
 export interface Project {

@@ -281,7 +281,9 @@ export default function CRMDashboardPage() {
     addToast(`Status Trello Task dipindahkan ke ${newStatus}!`);
 
     try {
-      await apiClient.updateProjectTaskStatus(taskId, newStatus);
+      if (selectedProjectId) {
+        await apiClient.updateProjectTaskDetail(selectedProjectId, taskId, { status: newStatus });
+      }
     } catch (err) {
       console.error('Failed to update task status in API:', err);
     }
@@ -308,6 +310,31 @@ export default function CRMDashboardPage() {
       }
     } catch (err) {
       console.error('Failed to create project task in API:', err);
+    }
+  };
+
+  const handleUpdateProjectTaskDetail = async (taskId: string, updates: any) => {
+    if (!selectedProjectId) return;
+    addToast('Perubahan Card Trello berhasil disimpan!');
+
+    try {
+      await apiClient.updateProjectTaskDetail(selectedProjectId, taskId, updates);
+      const tasksRes = await apiClient.getProjectTasks(selectedProjectId);
+      if (tasksRes.success) setProjectTasks(tasksRes.data);
+    } catch (err) {
+      console.error('Failed to update task detail in API:', err);
+    }
+  };
+
+  const handleDeleteProjectTask = async (taskId: string) => {
+    if (!selectedProjectId) return;
+    setProjectTasks((prev) => prev.filter((t) => t.id !== taskId));
+    addToast('Card Trello berhasil dihapus!', 'info');
+
+    try {
+      await apiClient.deleteProjectTask(selectedProjectId, taskId);
+    } catch (err) {
+      console.error('Failed to delete task in API:', err);
     }
   };
 
@@ -463,6 +490,8 @@ export default function CRMDashboardPage() {
               tasks={projectTasks}
               onMoveTask={handleMoveProjectTask}
               onAddTask={handleAddProjectTask}
+              onUpdateTaskDetail={handleUpdateProjectTaskDetail}
+              onDeleteTask={handleDeleteProjectTask}
               selectedProjectId={selectedProjectId}
               onSelectProject={setSelectedProjectId}
               salesReps={salesRepNames}
