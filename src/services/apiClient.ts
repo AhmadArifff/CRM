@@ -1,4 +1,4 @@
-import { Contact, Deal, Activity, User, StageId, KpiMetric } from '../types/crm';
+import { Contact, Deal, Activity, User, StageId, KpiMetric, Project, ProjectTask, TaskColumnStatus } from '../types/crm';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -101,7 +101,45 @@ export const apiClient = {
     return await res.json();
   },
 
-  // 5. ANALYTICS SUMMARY API
+  // 5. PROJECTS & TRELLO TASKS API
+  async getProjects(): Promise<ApiResponse<Project[]>> {
+    const res = await fetch('/api/v1/projects');
+    return await res.json();
+  },
+
+  async createProject(newProject: { name: string; description: string; dealId?: string }): Promise<ApiResponse<Project>> {
+    const res = await fetch('/api/v1/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newProject),
+    });
+    return await res.json();
+  },
+
+  async getProjectTasks(projectId: string): Promise<ApiResponse<ProjectTask[]>> {
+    const res = await fetch(`/api/v1/projects/${projectId}/tasks`);
+    return await res.json();
+  },
+
+  async createProjectTask(projectId: string, newTask: Omit<ProjectTask, 'id' | 'createdAt' | 'projectId'>): Promise<ApiResponse<ProjectTask>> {
+    const res = await fetch(`/api/v1/projects/${projectId}/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTask),
+    });
+    return await res.json();
+  },
+
+  async updateProjectTaskStatus(taskId: string, status: TaskColumnStatus): Promise<ApiResponse<ProjectTask>> {
+    const res = await fetch(`/api/v1/projects/task/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId, status }),
+    });
+    return await res.json();
+  },
+
+  // 6. ANALYTICS SUMMARY API
   async getAnalyticsSummary(): Promise<ApiResponse<{ kpis: KpiMetric[]; activePipelineValue: number }>> {
     const res = await fetch('/api/v1/analytics/summary');
     return await res.json();

@@ -183,7 +183,7 @@ async function main() {
   });
 
   // 6. Create Deals
-  await prisma.deal.upsert({
+  const d1 = await prisma.deal.upsert({
     where: { id: '66666666-6666-6666-6666-000000000001' },
     update: {},
     create: {
@@ -199,7 +199,7 @@ async function main() {
     },
   });
 
-  await prisma.deal.upsert({
+  const d2 = await prisma.deal.upsert({
     where: { id: '66666666-6666-6666-6666-000000000002' },
     update: {},
     create: {
@@ -215,39 +215,87 @@ async function main() {
     },
   });
 
-  await prisma.deal.upsert({
-    where: { id: '66666666-6666-6666-6666-000000000003' },
+  // 7. Create Post-Sales Projects & Trello Task Cards
+  const p1 = await prisma.project.upsert({
+    where: { id: '88888888-8888-8888-8888-000000000001' },
     update: {},
     create: {
-      id: '66666666-6666-6666-6666-000000000003',
+      id: '88888888-8888-8888-8888-000000000001',
       tenantId: tenant.id,
-      stageId: '33333333-3333-3333-3333-000000000001',
-      companyId: c3.id,
-      contactId: cnt3.id,
-      ownerId: u3.id,
-      title: 'Enterprise Cloud Migration Shopee',
-      value: 450000000,
-      expectedCloseDate: new Date('2026-10-01'),
+      dealId: d1.id,
+      name: 'Project Deploy Server & SLA Telkom Data Center',
+      description: 'Pengadaan, racking, serta setup OS & Kubernetes Cluster PT Telkom Indonesia',
+      status: 'IN_DEVELOPMENT',
     },
   });
 
-  await prisma.deal.upsert({
-    where: { id: '66666666-6666-6666-6666-000000000004' },
+  const p2 = await prisma.project.upsert({
+    where: { id: '88888888-8888-8888-8888-000000000002' },
     update: {},
     create: {
-      id: '66666666-6666-6666-6666-000000000004',
+      id: '88888888-8888-8888-8888-000000000002',
       tenantId: tenant.id,
-      stageId: '33333333-3333-3333-3333-000000000005',
-      companyId: c1.id,
-      contactId: cnt1.id,
-      ownerId: u1.id,
-      title: 'Lisensi Software CRM 500 User',
-      value: 350000000,
-      expectedCloseDate: new Date('2026-07-28'),
+      dealId: d2.id,
+      name: 'Core Banking API Integration Project',
+      description: 'Pengembangan ISO20022 Gateway & Open Banking API Connector Bank Mandiri',
+      status: 'IN_DEVELOPMENT',
     },
   });
 
-  // 7. Create Activities
+  // Tasks for Project 1 (Trello Cards)
+  const p1Tasks = [
+    {
+      id: '99999999-9999-9999-9999-000000000001',
+      title: 'Audit Hardware Rack Server & Spesifikasi PSU 2000W',
+      description: 'Cek fisik dan kelayakan pasokan listrik 3-phase di Data Center BSD',
+      status: 'DONE' as const,
+      priority: 'HIGH' as const,
+      assignedTo: u1.id,
+    },
+    {
+      id: '99999999-9999-9999-9999-000000000002',
+      title: 'Install Ubuntu Server 24.04 LTS & Setup K3s Cluster',
+      description: 'Konfigurasi 5 Master Nodes dan 10 Worker Nodes K3s di cloud privat',
+      status: 'IN_PROGRESS' as const,
+      priority: 'HIGH' as const,
+      assignedTo: u1.id,
+    },
+    {
+      id: '99999999-9999-9999-9999-000000000003',
+      title: 'Stress Test Benchmark CPU & RAM 256GB Under Full Load',
+      description: 'Simulasi load 50,000 concurrent user requests selama 48 jam nonstop',
+      status: 'REVIEW' as const,
+      priority: 'MEDIUM' as const,
+      assignedTo: u2.id,
+    },
+    {
+      id: '99999999-9999-9999-9999-000000000004',
+      title: 'Serah Terima Dokumen SLA Uptime 99.99% ke VP Infrastructure',
+      description: 'Penandatanganan berita acara serah terima (BAST) bersama Pak Budi',
+      status: 'TODO' as const,
+      priority: 'HIGH' as const,
+      assignedTo: u3.id,
+    },
+  ];
+
+  for (const t of p1Tasks) {
+    await prisma.projectTask.upsert({
+      where: { id: t.id },
+      update: {},
+      create: {
+        id: t.id,
+        projectId: p1.id,
+        title: t.title,
+        description: t.description,
+        status: t.status,
+        priority: t.priority,
+        assignedTo: t.assignedTo,
+        dueDate: new Date('2026-08-15'),
+      },
+    });
+  }
+
+  // 8. Create Activities
   await prisma.activity.upsert({
     where: { id: '77777777-7777-7777-7777-000000000001' },
     update: {},
@@ -280,23 +328,7 @@ async function main() {
     },
   });
 
-  await prisma.activity.upsert({
-    where: { id: '77777777-7777-7777-7777-000000000003' },
-    update: {},
-    create: {
-      id: '77777777-7777-7777-7777-000000000003',
-      tenantId: tenant.id,
-      userId: u3.id,
-      contactId: cnt3.id,
-      type: 'EMAIL',
-      subject: 'Kirim Dokumen Profil Perusahaan & Portofolio Cloud',
-      description: 'Mengirimkan pitch deck dan studi kasus Shopee IT Architecture',
-      dueDate: new Date('2026-08-04'),
-      isCompleted: true,
-    },
-  });
-
-  console.log('✅ Supabase Database Seeding Complete!');
+  console.log('✅ Supabase Database Seeding Complete with Projects & Trello Tasks!');
 }
 
 main()

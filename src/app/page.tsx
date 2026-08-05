@@ -5,6 +5,7 @@ import { Header } from '../components/layout/Header';
 import { Sidebar, TabType } from '../components/layout/Sidebar';
 import { OverviewTab } from '../components/dashboard/OverviewTab';
 import { DealsKanban } from '../components/kanban/DealsKanban';
+import { ProjectTaskBoard } from '../components/projects/ProjectTaskBoard';
 import { ContactsTable } from '../components/contacts/ContactsTable';
 import { ActivityLogger } from '../components/activities/ActivityLogger';
 import { PrdViewer } from '../components/prd/PrdViewer';
@@ -17,11 +18,8 @@ import { apiClient } from '../services/apiClient';
 import {
   INITIAL_USERS,
   INITIAL_STAGES,
-  INITIAL_DEALS,
-  INITIAL_CONTACTS,
-  INITIAL_ACTIVITIES,
 } from '../data/mockData';
-import { User, Deal, Contact, Activity, StageId, UserRole } from '../types/crm';
+import { User, Deal, Contact, Activity, StageId, UserRole, Project, ProjectTask, TaskColumnStatus } from '../types/crm';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [
   {
@@ -70,6 +68,9 @@ export default function CRMDashboardPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [projectTasks, setProjectTasks] = useState<ProjectTask[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
 
   // Toast System State
@@ -105,20 +106,22 @@ export default function CRMDashboardPage() {
   useEffect(() => {
     async function loadDataFromApi() {
       try {
-        const [contactsRes, dealsRes, activitiesRes] = await Promise.all([
-          apiClient.getContacts(),
-          apiClient.getDeals(),
-          apiClient.getActivities(),
+        const [contactsRes, dealsRes, activitiesRes, projectsRes] = await Promise.all([
+          apiClient.getContacts(currentUser.role === 'ADMIN' ? undefined : currentUser.id),
+          apiClient.getDeals(currentUser.role === 'ADMIN' ? undefined : currentUser.id),
+          apiClient.getActivities(currentUser.role === 'ADMIN' ? undefined : currentUser.id),
+          apiClient.getProjects(),
         ]);
 
-        if (contactsRes.success) {
-          setContacts(contactsRes.data);
-        }
-        if (dealsRes.success) {
-          setDeals(dealsRes.data);
-        }
-        if (activitiesRes.success) {
-          setActivities(activitiesRes.data);
+        if (contactsRes.success) setContacts(contactsRes.data);
+        if (dealsRes.success) setDeals(dealsRes.data);
+        if (activitiesRes.success) setActivities(activitiesRes.data);
+        if (projectsRes.success && projectsRes.data.length > 0) {
+          setProjects(projectsRes.data);
+          const firstProjId = projectsRes.data[0].id;
+          setSelectedProjectId(firstProjId);
+          const tasksRes = await apiClient.getProjectTasks(firstProjId);
+          if (tasksRes.success) setProjectTasks(tasksRes.data);
         }
       } catch (err) {
         console.error('Error syncing Supabase API data:', err);
@@ -126,7 +129,21 @@ export default function CRMDashboardPage() {
     }
 
     loadDataFromApi();
-  }, []);
+  }, [currentUser]);
+
+  // Load project tasks when selected project changes
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    async function loadTasks() {
+      try {
+        const tasksRes = await apiClient.getProjectTasks(selectedProjectId);
+        if (tasksRes.success) setProjectTasks(tasksRes.data);
+      } catch (err) {
+        console.error('Error loading project tasks:', err);
+      }
+    }
+    loadTasks();
+  }, [selectedProjectId]);
 
   const salesRepNames = INITIAL_USERS.map((u) => u.name);
 
@@ -149,29 +166,17 @@ export default function CRMDashboardPage() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     setShowLanding(true);
-    addToast('Sesi berakir. Anda telah keluar dari aplikasi.', 'info');
+    addToast('Anda telah berhasil keluar dari akun ApexCRM.', 'info');
   };
 
-  // Notification Handlers
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    addToast('Semua notifikasi ditandai dibaca');
-  };
-
-  const handleClearNotifications = () => {
-    setNotifications([]);
-    addToast('Riwayat notifikasi dibersihkan', 'info');
-  };
-
-  const handleNotificationClick = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
-  };
+  // Interactive Action Handlers (State + Supabase REST API Sync)
 
   // API Integrated Handler: Move deal stage
   const handleMoveDeal = async (dealId: string, targetStage: StageId) => {
     const targetDeal = deals.find((d) => d.id === dealId);
-    setDeals((prev) =>
-      prev.map((d) => (d.id === dealId ? { ...d, stageId: targetStage } : d))
+
+    setDeals((prevDeals) =>
+      prevDeals.map((d) => (d.id === dealId ? { ...d, stageId: targetStage } : d))
     );
 
     const newNotif: AppNotification = {
@@ -223,7 +228,7 @@ export default function CRMDashboardPage() {
       createdAt: new Date().toISOString().split('T')[0],
       notesCount: 0,
     };
-    setContacts((prev) => [createdTemp, ...prev]);
+    setContacts((prev) => [...prev, createdTemp]);
     addToast(`Lead baru "${newContactData.name}" berhasil disimpan!`);
 
     try {
@@ -243,7 +248,7 @@ export default function CRMDashboardPage() {
       id: `act-${Date.now()}`,
     };
     setActivities((prev) => [createdTemp, ...prev]);
-    addToast(`Log aktivitas "${newActData.subject}" berhasil disimpan!`);
+    addToast(`Aktivitas task "${newActData.subject}" berhasil dicatat!`);
 
     try {
       const res = await apiClient.createActivity(newActData);
@@ -255,43 +260,103 @@ export default function CRMDashboardPage() {
     }
   };
 
-  // API Integrated Handler: Toggle activity completed state
+  // API Integrated Handler: Toggle activity complete status
   const handleToggleActivity = async (activityId: string) => {
-    const targetAct = activities.find((a) => a.id === activityId);
     setActivities((prev) =>
       prev.map((a) => (a.id === activityId ? { ...a, isCompleted: !a.isCompleted } : a))
     );
 
-    const statusText = !targetAct?.isCompleted ? 'selesai' : 'ditandai belum selesai';
-    addToast(`Task "${targetAct?.subject}" ${statusText}`);
-
     try {
       await apiClient.toggleActivityComplete(activityId);
     } catch (err) {
-      console.error('Failed to sync activity status to API:', err);
+      console.error('Failed to toggle activity state in API:', err);
     }
   };
 
+  // Trello Project Tasks Handlers
+  const handleMoveProjectTask = async (taskId: string, newStatus: TaskColumnStatus) => {
+    setProjectTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+    );
+    addToast(`Status Trello Task dipindahkan ke ${newStatus}!`);
+
+    try {
+      await apiClient.updateProjectTaskStatus(taskId, newStatus);
+    } catch (err) {
+      console.error('Failed to update task status in API:', err);
+    }
+  };
+
+  const handleAddProjectTask = async (
+    newTaskData: Omit<ProjectTask, 'id' | 'createdAt' | 'projectId'>
+  ) => {
+    if (!selectedProjectId) return;
+    const tempTask: ProjectTask = {
+      ...newTaskData,
+      id: `task-${Date.now()}`,
+      projectId: selectedProjectId,
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+
+    setProjectTasks((prev) => [tempTask, ...prev]);
+    addToast(`Trello Task Card "${newTaskData.title}" berhasil ditambahkan!`);
+
+    try {
+      const res = await apiClient.createProjectTask(selectedProjectId, newTaskData);
+      if (res.success) {
+        setProjectTasks((prev) => prev.map((t) => (t.id === tempTask.id ? res.data : t)));
+      }
+    } catch (err) {
+      console.error('Failed to create project task in API:', err);
+    }
+  };
+
+  // Notification Drawer Handlers
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    addToast('Semua notifikasi ditandai sudah dibaca.');
+  };
+
+  const handleClearNotifications = () => {
+    setNotifications([]);
+    addToast('Daftar notifikasi dibersihkan.');
+  };
+
+  const handleNotificationClick = (id: string) => {
+    const targetNotif = notifications.find((n) => n.id === id);
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
+
+    if (targetNotif?.type === 'deal') setActiveTab('kanban');
+    if (targetNotif?.type === 'contact') setActiveTab('contacts');
+    if (targetNotif?.type === 'task') setActiveTab('activities');
+  };
+
+  // Helper title for active tab
   const getTabTitle = () => {
     switch (activeTab) {
       case 'overview':
-        return 'Executive Overview';
+        return 'Executive Overview & KPI Dashboard';
       case 'kanban':
-        return 'Deals Pipeline (Kanban)';
+        return 'Deals Pipeline Kanban Board';
+      case 'projects':
+        return 'Project Tasks & Trello Board';
       case 'contacts':
-        return 'Leads & Customer Contacts';
+        return 'Leads & Contact Management';
       case 'activities':
-        return 'Activity Logs & Task Tracker';
+        return 'Sales Activity Logs & Schedule';
       case 'prd':
-        return 'PRD & Architecture Specifications';
+        return 'PRD & System Architecture Specs';
+      default:
+        return 'ApexCRM Enterprise System';
     }
   };
 
-  // Render Landing Page if unauthenticated or landing view requested
+  // Render Public Landing Page View
   if (showLanding || !isAuthenticated) {
     return (
       <>
-        {mounted && <ToastContainer toasts={toasts} onDismiss={removeToast} />}
         <LandingPage
           onOpenLogin={() => setAuthModal({ isOpen: true, mode: 'login' })}
           onOpenRegister={() => setAuthModal({ isOpen: true, mode: 'register' })}
@@ -388,6 +453,18 @@ export default function CRMDashboardPage() {
               stages={INITIAL_STAGES}
               onMoveDeal={handleMoveDeal}
               onAddDeal={handleAddDeal}
+              salesReps={salesRepNames}
+            />
+          )}
+
+          {activeTab === 'projects' && (
+            <ProjectTaskBoard
+              projects={projects}
+              tasks={projectTasks}
+              onMoveTask={handleMoveProjectTask}
+              onAddTask={handleAddProjectTask}
+              selectedProjectId={selectedProjectId}
+              onSelectProject={setSelectedProjectId}
               salesReps={salesRepNames}
             />
           )}

@@ -77,6 +77,33 @@ export interface Activity {
   priority?: 'NORMAL' | 'URGENT';
 }
 
+export type TaskColumnStatus = 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE';
+
+export interface ProjectTask {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  status: TaskColumnStatus;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  assignedTo: string;
+  dueDate: string;
+  createdAt: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  companyName: string;
+  dealTitle: string;
+  totalTasks: number;
+  completedTasks: number;
+  progressPct: number;
+  createdAt: string;
+}
+
 export interface KpiMetric {
   title: string;
   value: string;

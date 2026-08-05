@@ -14,7 +14,7 @@ import {
   X,
 } from 'lucide-react';
 
-export type TabType = 'overview' | 'kanban' | 'contacts' | 'activities' | 'prd';
+export type TabType = 'overview' | 'kanban' | 'projects' | 'contacts' | 'activities' | 'prd';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -35,8 +35,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navItems = [
     { id: 'overview' as TabType, label: 'Overview & KPI', icon: LayoutDashboard },
-    { id: 'kanban' as TabType, label: 'Deals Pipeline (Kanban)', icon: Kanban, badge: '5 Active' },
-    { id: 'contacts' as TabType, label: 'Leads & Contacts', icon: Users, badge: '5 New' },
+    { id: 'kanban' as TabType, label: 'Deals Pipeline (Kanban)', icon: Kanban },
+    { id: 'projects' as TabType, label: 'Project Tasks (Trello)', icon: Sparkles, badge: 'Sprint' },
+    { id: 'contacts' as TabType, label: 'Leads & Contacts', icon: Users },
     { id: 'activities' as TabType, label: 'Activity Logs & Tasks', icon: CalendarCheck },
     { id: 'prd' as TabType, label: 'PRD & Architecture Specs', icon: FileText, highlight: true },
   ];
