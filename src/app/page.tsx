@@ -66,10 +66,10 @@ export default function CRMDashboardPage() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
-  // Core CRM Entities & Notification State
-  const [deals, setDeals] = useState<Deal[]>(INITIAL_DEALS);
-  const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
-  const [activities, setActivities] = useState<Activity[]>(INITIAL_ACTIVITIES);
+  // Core CRM Entities & Notification State (Loaded dynamically from Supabase API)
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
 
   // Toast System State
@@ -101,7 +101,7 @@ export default function CRMDashboardPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Fetch initial state from API
+  // Fetch initial state directly from Supabase REST API
   useEffect(() => {
     async function loadDataFromApi() {
       try {
@@ -111,17 +111,17 @@ export default function CRMDashboardPage() {
           apiClient.getActivities(),
         ]);
 
-        if (contactsRes.success && contactsRes.data.length > 0) {
+        if (contactsRes.success) {
           setContacts(contactsRes.data);
         }
-        if (dealsRes.success && dealsRes.data.length > 0) {
+        if (dealsRes.success) {
           setDeals(dealsRes.data);
         }
-        if (activitiesRes.success && activitiesRes.data.length > 0) {
+        if (activitiesRes.success) {
           setActivities(activitiesRes.data);
         }
       } catch (err) {
-        console.warn('Backend API Sync Warning: Falling back to local state.', err);
+        console.error('Error syncing Supabase API data:', err);
       }
     }
 
