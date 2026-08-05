@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { INITIAL_DEALS } from '../../../../../../data/mockData';
+import { prisma } from '@/lib/prisma';
 
 export async function PATCH(
   request: Request,
@@ -8,21 +8,27 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { stageId } = body;
+    const { targetStage } = body;
 
-    const deal = INITIAL_DEALS.find((d) => d.id === id);
-    if (deal) {
-      deal.stageId = stageId;
-    }
+    const updated = await prisma.deal.update({
+      where: { id },
+      data: {
+        stageId: targetStage,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      data: deal || { id, stageId },
-      message: `Deal stage berhasil dipindahkan ke ${stageId}`,
+      data: {
+        ...updated,
+        value: Number(updated.value),
+      },
+      message: 'Stage deal berhasil diperbarui di Supabase database',
     });
   } catch (error) {
+    console.error('Error updating deal stage in Supabase:', error);
     return NextResponse.json(
-      { success: false, error: { code: 'UPDATE_FAILED', message: 'Gagal mengubah stage deal' } },
+      { success: false, error: { code: 'UPDATE_FAILED', message: 'Gagal memperbarui stage deal' } },
       { status: 400 }
     );
   }
