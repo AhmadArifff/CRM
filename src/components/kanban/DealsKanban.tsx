@@ -214,16 +214,14 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({
 
                       {/* Owner Avatar & Touch-Friendly Move Buttons */}
                       <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
                           <img
-                            src={deal.ownerAvatar}
-                            alt={deal.ownerName}
+                            src={deal.ownerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                            alt={deal.ownerName || 'Owner'}
                             className="w-6 h-6 rounded-full object-cover border border-indigo-500/50"
                           />
                           <span className="text-[10px] text-gray-300 font-semibold truncate max-w-[80px]">
-                            {deal.ownerName.split(' ')[0]}
+                            {(deal.ownerName || 'Sales Rep').split(' ')[0]}
                           </span>
-                        </div>
 
                         {/* Stage Shift Controls (Min 44x44px Touch Target) */}
                         <div className="flex items-center gap-1">

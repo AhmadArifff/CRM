@@ -50,7 +50,10 @@ export async function GET() {
       stageId: d.stage?.name.toUpperCase().replace(' ', '_') || 'QUALIFICATION',
       rawStageId: d.stageId,
       owner: d.owner?.name || 'Ahmad Ariff',
+      ownerName: d.owner?.name || 'Ahmad Ariff',
+      ownerAvatar: d.owner?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       contactPerson: d.contact?.name || 'Ir. Budi Santoso',
+      contactName: d.contact?.name || 'Ir. Budi Santoso',
       expectedCloseDate: d.expectedCloseDate
         ? d.expectedCloseDate.toISOString().split('T')[0]
         : '2026-08-30',
@@ -98,7 +101,10 @@ export async function POST(request: Request) {
           value: Number(newDeal.value),
           stageId: stageId || 'QUALIFICATION',
           owner: owner || 'Ahmad Ariff',
+          ownerName: owner || 'Ahmad Ariff',
+          ownerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
           contactPerson: contactPerson || 'Contact Lead',
+          contactName: contactPerson || 'Contact Lead',
           expectedCloseDate: newDeal.expectedCloseDate
             ? newDeal.expectedCloseDate.toISOString().split('T')[0]
             : '2026-09-01',

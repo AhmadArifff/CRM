@@ -33,7 +33,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (!email) return;
 
     onSuccess({
-      name: name || (email.split('@')[0] ?? 'Sales User'),
+      name: name || (email && email.includes('@') ? email.split('@')[0] : 'Sales User'),
       email,
       role,
     });

@@ -108,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             {users.map((u) => (
               <option key={u.id} value={u.id} className="bg-slate-900 text-white">
-                {u.name.split(' ')[0]} ({u.role.replace('_', ' ')})
+                {(u.name || 'User').split(' ')[0]} ({(u.role || 'ROLE').replace('_', ' ')})
               </option>
             ))}
           </select>
