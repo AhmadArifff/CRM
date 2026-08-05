@@ -89,6 +89,16 @@ export interface ProjectTask {
   assignedTo: string;
   dueDate: string;
   createdAt: string;
+  coverImage?: string;
+  commentsCount?: number;
+  attachmentsCount?: number;
+  checklistTotal?: number;
+  checklistCompleted?: number;
+  tagText?: string;
+  tagColor?: string;
+  isWatched?: boolean;
+  isOverdue?: boolean;
+  members?: string[];
 }
 
 export interface Project {
