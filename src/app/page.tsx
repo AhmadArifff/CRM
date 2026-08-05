@@ -373,7 +373,7 @@ export default function CRMDashboardPage() {
         />
 
         {/* Scrollable View Container */}
-        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full">
           {activeTab === 'overview' && (
             <OverviewTab
               deals={deals}

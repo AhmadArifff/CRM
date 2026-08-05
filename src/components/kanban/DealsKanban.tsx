@@ -134,8 +134,9 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({
         })}
       </div>
 
-      {/* 3. KANBAN BOARD COLUMNS (Mobile/Tablet displays active tab column, Desktop displays all 5 columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+      {/* 3. KANBAN BOARD COLUMNS (Mobile/Tablet displays active tab column, Desktop displays all 5 columns with min-width) */}
+      <div className="overflow-x-auto pb-4 pt-1 no-scrollbar">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start lg:min-w-[1250px] xl:min-w-full">
         {stages.map((stage, idx) => {
           const stageDeals = filteredDeals.filter((d) => d.stageId === stage.id);
           const totalValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
@@ -252,6 +253,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* 4. Responsive Add Deal Modal */}
