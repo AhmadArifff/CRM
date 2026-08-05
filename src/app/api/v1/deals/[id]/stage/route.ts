@@ -37,9 +37,9 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { targetStage } = body;
+    const stageInput = body.targetStage || body.stageId;
 
-    const validStageUuid = resolveStageUuid(targetStage);
+    const validStageUuid = resolveStageUuid(stageInput);
 
     const updated = await prisma.deal.update({
       where: { id },
@@ -54,7 +54,7 @@ export async function PATCH(
         ...updated,
         value: Number(updated.value),
       },
-      message: 'Stage deal berhasil diperbarui di Supabase database (tabel: deals)',
+      message: 'Stage deal berhasil disimpan permanen ke database Supabase',
     });
   } catch (error) {
     console.error('Error updating deal stage in Supabase:', error);

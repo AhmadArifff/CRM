@@ -30,9 +30,15 @@ function resolveStageUuid(stageInput: string): string {
   return '33333333-3333-3333-3333-000000000001';
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    const whereClause = userId && userId.includes('-') ? { ownerId: userId } : {};
+
     const deals = await prisma.deal.findMany({
+      where: whereClause,
       include: {
         company: true,
         contact: true,
@@ -76,14 +82,15 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { title, company, value, stageId, owner, contactPerson, expectedCloseDate } = body;
+    const { title, company, value, stageId, owner, contactPerson, expectedCloseDate, ownerId } = body;
 
     const validStageUuid = resolveStageUuid(stageId);
+    const validOwnerUuid = ownerId && ownerId.includes('-') ? ownerId : '11111111-1111-1111-1111-111111111111';
 
     const newDeal = await prisma.deal.create({
       data: {
         tenantId: '00000000-0000-0000-0000-000000000001',
-        ownerId: '11111111-1111-1111-1111-111111111111',
+        ownerId: validOwnerUuid,
         title: title || 'Proyek Baru',
         value: value || 100000000,
         stageId: validStageUuid,

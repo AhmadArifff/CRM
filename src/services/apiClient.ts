@@ -38,8 +38,9 @@ export const apiClient = {
   },
 
   // 2. CONTACTS API
-  async getContacts(): Promise<ApiResponse<Contact[]>> {
-    const res = await fetch('/api/v1/contacts');
+  async getContacts(userId?: string): Promise<ApiResponse<Contact[]>> {
+    const url = userId ? `/api/v1/contacts?userId=${encodeURIComponent(userId)}` : '/api/v1/contacts';
+    const res = await fetch(url);
     return await res.json();
   },
 
@@ -53,8 +54,9 @@ export const apiClient = {
   },
 
   // 3. DEALS API
-  async getDeals(): Promise<ApiResponse<Deal[]>> {
-    const res = await fetch('/api/v1/deals');
+  async getDeals(userId?: string): Promise<ApiResponse<Deal[]>> {
+    const url = userId ? `/api/v1/deals?userId=${encodeURIComponent(userId)}` : '/api/v1/deals';
+    const res = await fetch(url);
     return await res.json();
   },
 
@@ -71,14 +73,15 @@ export const apiClient = {
     const res = await fetch(`/api/v1/deals/${dealId}/stage`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stageId }),
+      body: JSON.stringify({ stageId, targetStage: stageId }),
     });
     return await res.json();
   },
 
   // 4. ACTIVITIES API
-  async getActivities(): Promise<ApiResponse<Activity[]>> {
-    const res = await fetch('/api/v1/activities');
+  async getActivities(userId?: string): Promise<ApiResponse<Activity[]>> {
+    const url = userId ? `/api/v1/activities?userId=${encodeURIComponent(userId)}` : '/api/v1/activities';
+    const res = await fetch(url);
     return await res.json();
   },
 
