@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Search, Bell, Plus, Sparkles, X, User as UserIcon } from 'lucide-react';
+import { Menu, Search, Bell, Plus, Sparkles, X, User as UserIcon, LogOut, Home } from 'lucide-react';
 import { User } from '../../types/crm';
 
 interface HeaderProps {
@@ -11,6 +11,10 @@ interface HeaderProps {
   onOpenAddModal: () => void;
   activeTabTitle: string;
   onOpenMobileSidebar: () => void;
+  unreadNotificationCount: number;
+  onOpenNotifications: () => void;
+  onLogout: () => void;
+  onGoToLanding: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,11 +24,15 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAddModal,
   activeTabTitle,
   onOpenMobileSidebar,
+  unreadNotificationCount,
+  onOpenNotifications,
+  onLogout,
+  onGoToLanding,
 }) => {
   const [isSearchOpenMobile, setIsSearchOpenMobile] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Keyboard shortcut Cmd+K / Ctrl+K listener for QA Power-User Feature
+  // Keyboard shortcut Cmd+K / Ctrl+K listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -54,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
           </h1>
           <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
             <Sparkles className="w-3 h-3 text-indigo-400" />
-            QA Verified Enterprise CRM
+            ApexCRM Enterprise System
           </span>
         </div>
       </div>
@@ -72,6 +80,14 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <button
+          onClick={onGoToLanding}
+          title="Ke Landing Page"
+          className="touch-target p-2 text-gray-300 hover:text-white rounded-xl hover:bg-white/5"
+        >
+          <Home className="w-5 h-5 text-purple-400" />
+        </button>
+
         <button
           onClick={() => setIsSearchOpenMobile(!isSearchOpenMobile)}
           className="md:hidden touch-target p-2 text-gray-300 hover:text-white"
@@ -107,10 +123,26 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden sm:inline">Tambah Deal</span>
         </button>
 
-        {/* Notifications Icon */}
-        <button className="touch-target relative text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/5">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+        {/* Notifications Icon with Badge */}
+        <button
+          onClick={onOpenNotifications}
+          className="touch-target relative text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/5"
+        >
+          <Bell className="w-5 h-5 text-indigo-300" />
+          {unreadNotificationCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white font-bold text-[9px] rounded-full flex items-center justify-center animate-pulse">
+              {unreadNotificationCount}
+            </span>
+          )}
+        </button>
+
+        {/* Logout Button */}
+        <button
+          onClick={onLogout}
+          title="Keluar"
+          className="touch-target p-2 text-gray-400 hover:text-rose-400 rounded-xl hover:bg-rose-500/10 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
         </button>
       </div>
 
