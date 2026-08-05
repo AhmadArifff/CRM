@@ -1,21 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  Kanban,
   Plus,
-  CheckCircle2,
   Clock,
-  User as UserIcon,
   Sparkles,
   ArrowRight,
   ArrowLeft,
-  CheckSquare,
-  AlertCircle,
   Building,
-  Layers,
   X,
-  Filter,
+  MoreHorizontal,
+  GripVertical,
+  Tag,
+  MessageSquare,
+  Paperclip,
+  CheckSquare,
+  Eye,
+  ChevronDown,
+  Users,
+  Calendar,
 } from 'lucide-react';
 import { Project, ProjectTask, TaskColumnStatus } from '../../types/crm';
 
@@ -29,6 +32,20 @@ interface ProjectTaskBoardProps {
   salesReps: string[];
 }
 
+/* ── Trello‑style colour labels ── */
+const LABEL_COLORS: Record<string, { bg: string; text: string; name: string }> = {
+  HIGH: { bg: 'bg-[#F87168]', text: 'text-white', name: 'Urgent' },
+  MEDIUM: { bg: 'bg-[#F5CD47]', text: 'text-gray-900', name: 'Medium' },
+  LOW: { bg: 'bg-[#4BCE97]', text: 'text-gray-900', name: 'Low Priority' },
+};
+
+const COLUMN_COLORS: Record<TaskColumnStatus, string> = {
+  TODO: '#579DFF',
+  IN_PROGRESS: '#F5CD47',
+  REVIEW: '#9F8FEF',
+  DONE: '#4BCE97',
+};
+
 export const ProjectTaskBoard: React.FC<ProjectTaskBoardProps> = ({
   projects,
   tasks,
@@ -38,10 +55,13 @@ export const ProjectTaskBoard: React.FC<ProjectTaskBoardProps> = ({
   onSelectProject,
   salesReps,
 }) => {
-  const [filterPriority, setFilterPriority] = useState<string>('ALL');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addToColumn, setAddToColumn] = useState<TaskColumnStatus>('TODO');
+  const [inlineAddColumn, setInlineAddColumn] = useState<TaskColumnStatus | null>(null);
+  const [inlineTitle, setInlineTitle] = useState('');
+  const inlineInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Form state
+  // Form state for modal
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskColumnStatus>('TODO');
@@ -51,16 +71,12 @@ export const ProjectTaskBoard: React.FC<ProjectTaskBoardProps> = ({
 
   const currentProject = projects.find((p) => p.id === selectedProjectId) || projects[0];
 
-  const columns: { id: TaskColumnStatus; title: string; color: string; bg: string; border: string }[] = [
-    { id: 'TODO', title: 'To Do (Antrian Task)', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-t-blue-500' },
-    { id: 'IN_PROGRESS', title: 'In Progress (Pengerjaan)', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-t-amber-500' },
-    { id: 'REVIEW', title: 'Review & QA Testing', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-t-purple-500' },
-    { id: 'DONE', title: 'Done (Selesai BAST)', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-t-emerald-500' },
+  const columns: { id: TaskColumnStatus; title: string }[] = [
+    { id: 'TODO', title: 'To Do' },
+    { id: 'IN_PROGRESS', title: 'In Progress' },
+    { id: 'REVIEW', title: 'Review / QA' },
+    { id: 'DONE', title: 'Done ✓' },
   ];
-
-  const filteredTasks = tasks.filter(
-    (t) => filterPriority === 'ALL' || t.priority === filterPriority
-  );
 
   const totalTasksCount = tasks.length;
   const completedTasksCount = tasks.filter((t) => t.status === 'DONE').length;
@@ -69,347 +85,474 @@ export const ProjectTaskBoard: React.FC<ProjectTaskBoardProps> = ({
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title) return;
-
-    onAddTask({
-      title,
-      description,
-      status,
-      priority,
-      assignedTo,
-      dueDate,
-    });
-
+    onAddTask({ title, description, status, priority, assignedTo, dueDate });
     setTitle('');
     setDescription('');
     setIsAddModalOpen(false);
   };
 
+  const handleInlineAdd = (colId: TaskColumnStatus) => {
+    if (!inlineTitle.trim()) {
+      setInlineAddColumn(null);
+      return;
+    }
+    onAddTask({
+      title: inlineTitle.trim(),
+      description: '',
+      status: colId,
+      priority: 'MEDIUM',
+      assignedTo: salesReps[0] || 'Ahmad Ariff',
+      dueDate: '2026-08-30',
+    });
+    setInlineTitle('');
+    setInlineAddColumn(null);
+  };
+
+  const openInlineAdd = (colId: TaskColumnStatus) => {
+    setInlineAddColumn(colId);
+    setInlineTitle('');
+    setTimeout(() => inlineInputRef.current?.focus(), 50);
+  };
+
   return (
-    <div className="space-y-6 pb-16 lg:pb-0 max-w-[1600px] mx-auto">
-      {/* 1. Executive Project Header & Progress Bar */}
-      <div className="glass-panel p-5 sm:p-6 lg:p-7 rounded-3xl space-y-5 border border-indigo-500/20 bg-gradient-to-r from-slate-900 via-indigo-950/60 to-purple-950/70">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
-              <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
-                Post-Sales Development & Implementation
-              </span>
-            </div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <Kanban className="w-7 h-7 text-indigo-400" />
-              Project Tasks & Trello Board
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-300 max-w-2xl">
-              Kelola sprint development, alokasi tugas tim, dan penyelesaian milestone untuk proyek deals yang sedang berjalan.
-            </p>
-          </div>
+    <div className="flex flex-col h-full pb-16 lg:pb-0 -mx-3.5 sm:-mx-6 lg:-mx-8 -mt-3.5 sm:-mt-6 lg:-mt-8">
+      {/* ─── Trello‑style Top Toolbar ─── */}
+      <div
+        className="px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0"
+        style={{ backgroundColor: 'rgba(16, 18, 30, 0.85)', backdropFilter: 'blur(12px)' }}
+      >
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Board Title */}
+          <h1 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 shrink-0">
+            <Sparkles className="w-5 h-5 text-[#579DFF]" />
+            <span className="truncate max-w-[280px]">{currentProject?.name || 'Project Board'}</span>
+          </h1>
 
-          {/* Project Selector & Add Card Button */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-900/90 px-3.5 py-2.5 rounded-2xl border border-white/10 text-xs">
-              <Building className="w-4 h-4 text-indigo-400 shrink-0" />
-              <span className="text-gray-400 font-medium shrink-0">Pilih Proyek:</span>
-              <select
-                value={selectedProjectId}
-                onChange={(e) => onSelectProject(e.target.value)}
-                className="bg-transparent text-white font-bold focus:outline-none cursor-pointer max-w-[220px] truncate"
+          {/* Separator */}
+          <div className="hidden sm:block w-px h-5 bg-white/20" />
+
+          {/* Star / Watch */}
+          <button className="p-1.5 rounded-md hover:bg-white/10 text-gray-400 hover:text-white transition-colors" title="Watch Board">
+            <Eye className="w-4 h-4" />
+          </button>
+
+          {/* Members */}
+          <div className="flex items-center -space-x-1.5">
+            {salesReps.slice(0, 3).map((rep, i) => (
+              <div
+                key={rep}
+                className="w-7 h-7 rounded-full border-2 border-[#1d2125] flex items-center justify-center text-[10px] font-bold text-white"
+                style={{ backgroundColor: ['#579DFF', '#9F8FEF', '#F87168'][i] || '#579DFF', zIndex: 3 - i }}
+                title={rep}
               >
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-slate-900">
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="touch-target px-4 py-2.5 text-xs font-extrabold text-white rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 shadow-lg shadow-indigo-600/30 transition-all active:scale-95 flex items-center justify-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Tambah Task Trello
-            </button>
-          </div>
-        </div>
-
-        {/* Project Progress Overview */}
-        {currentProject && (
-          <div className="pt-3 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-            <div className="space-y-1">
-              <span className="text-gray-400 block font-medium">Klien Perusahaan</span>
-              <span className="text-white font-bold text-sm flex items-center gap-1.5">
-                <Building className="w-4 h-4 text-indigo-400" />
-                {currentProject.companyName}
-              </span>
-            </div>
-
-            <div className="space-y-1 sm:col-span-2">
-              <div className="flex justify-between font-bold">
-                <span className="text-gray-300">Progress Completion Sprint</span>
-                <span className="text-emerald-400 font-extrabold">
-                  {completedTasksCount} / {totalTasksCount} Task Selesai ({overallProgressPct}%)
-                </span>
+                {(rep || 'U').substring(0, 2).toUpperCase()}
               </div>
-              <div className="w-full h-3 bg-slate-950/90 rounded-full overflow-hidden p-0.5 border border-white/10">
-                <div
-                  className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 rounded-full transition-all duration-500"
-                  style={{ width: `${overallProgressPct}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 2. Priority Filter Bar */}
-      <div className="glass-panel p-3.5 sm:p-4 rounded-2xl flex items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-indigo-400 shrink-0" />
-          <span className="text-gray-400 font-medium">Filter Priority:</span>
-          <div className="flex items-center gap-1.5">
-            {['ALL', 'HIGH', 'MEDIUM', 'LOW'].map((p) => (
-              <button
-                key={p}
-                onClick={() => setFilterPriority(p)}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
-                  filterPriority === p
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-slate-900/80 text-gray-400 border border-white/10 hover:text-white'
-                }`}
-              >
-                {p}
-              </button>
             ))}
           </div>
         </div>
 
-        <span className="text-gray-400 hidden sm:inline font-medium">
-          Menampilkan <strong className="text-white">{filteredTasks.length}</strong> task cards
-        </span>
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          {/* Project Selector */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] bg-white/10 hover:bg-white/20 text-white cursor-pointer transition-colors">
+            <Building className="w-3.5 h-3.5" />
+            <select
+              value={selectedProjectId}
+              onChange={(e) => onSelectProject(e.target.value)}
+              className="bg-transparent text-white text-xs font-medium focus:outline-none cursor-pointer max-w-[200px] truncate"
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id} className="bg-[#1d2125] text-white">
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Progress Pill */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-[4px] bg-white/10 text-white">
+            <div className="w-16 h-1.5 bg-white/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#4BCE97] rounded-full transition-all duration-500"
+                style={{ width: `${overallProgressPct}%` }}
+              />
+            </div>
+            <span className="font-medium text-[11px]">{overallProgressPct}%</span>
+          </div>
+
+          {/* Filter */}
+          <button className="px-3 py-1.5 rounded-[4px] bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center gap-1.5">
+            <Tag className="w-3.5 h-3.5" />
+            Filter
+          </button>
+        </div>
       </div>
 
-      {/* 3. 4-Column Trello Kanban Board */}
-      <div className="overflow-x-auto pb-4 pt-1 no-scrollbar">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start lg:min-w-[1100px] xl:min-w-full">
-          {columns.map((col, idx) => {
-            const colTasks = filteredTasks.filter((t) => t.status === col.id);
+      {/* ─── Board Canvas ─── */}
+      <div
+        className="flex-1 overflow-x-auto overflow-y-hidden px-3 sm:px-4 pt-3 pb-4"
+        style={{
+          background: 'linear-gradient(135deg, #0f1724 0%, #131a2e 40%, #1a1333 100%)',
+        }}
+      >
+        <div className="flex gap-3 items-start h-full" style={{ minWidth: 'max-content' }}>
+          {columns.map((col, colIdx) => {
+            const colTasks = tasks.filter((t) => t.status === col.id);
 
             return (
               <div
                 key={col.id}
-                className={`glass-panel rounded-3xl p-4 flex flex-col space-y-3 bg-slate-950/40 border-t-4 ${col.border}`}
+                className="flex flex-col rounded-xl shrink-0 w-[272px]"
+                style={{ backgroundColor: '#101204', maxHeight: 'calc(100vh - 170px)' }}
               >
-                {/* Column Header */}
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                {/* ── List Header ── */}
+                <div className="flex items-center justify-between px-3 pt-3 pb-2">
                   <div className="flex items-center gap-2">
-                    <span className={`font-extrabold text-sm ${col.color}`}>{col.title}</span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-900 text-white border border-white/10">
-                      {colTasks.length}
-                    </span>
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLUMN_COLORS[col.id] }} />
+                    <h3 className="text-sm font-semibold text-[#B6C2CF]">{col.title}</h3>
+                    <span className="text-[11px] text-[#8C9BAB] font-medium">{colTasks.length}</span>
                   </div>
+                  <button className="p-1 rounded-md hover:bg-white/10 text-[#8C9BAB] hover:text-white transition-colors">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
                 </div>
 
-                {/* Trello Task Cards */}
-                <div className="space-y-3 min-h-[320px]">
-                  {colTasks.length === 0 ? (
-                    <div className="h-32 rounded-2xl border border-dashed border-white/10 flex items-center justify-center text-xs text-gray-500 font-medium">
-                      Belum ada task di kolom ini
+                {/* ── Card List (Scrollable) ── */}
+                <div className="flex-1 overflow-y-auto px-2 pb-1 space-y-2 trello-scroll" style={{ minHeight: '120px' }}>
+                  {colTasks.length === 0 && inlineAddColumn !== col.id && (
+                    <div className="py-8 text-center text-xs text-[#5D6B7A] select-none">
+                      Drop cards here
                     </div>
-                  ) : (
-                    colTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="p-4 rounded-2xl glass-panel glass-panel-hover border border-white/10 space-y-3 relative shadow-lg"
-                      >
-                        {/* Priority Badge & Due Date */}
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
-                              task.priority === 'HIGH'
-                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                                : task.priority === 'MEDIUM'
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                            }`}
-                          >
-                            {task.priority} PRIORITY
-                          </span>
-                          <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-indigo-400" />
-                            {task.dueDate}
-                          </span>
-                        </div>
+                  )}
 
-                        {/* Title & Description */}
-                        <div className="space-y-1">
-                          <h4 className="text-xs font-bold text-white leading-snug">{task.title}</h4>
+                  {colTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="group rounded-lg p-0 cursor-pointer transition-all hover:outline hover:outline-2 hover:outline-[#579DFF] hover:-translate-y-[1px]"
+                      style={{ backgroundColor: '#22272B' }}
+                    >
+                      {/* Trello Label Strip */}
+                      <div className="flex gap-1 px-3 pt-2.5 pb-1">
+                        <span
+                          className={`h-2 rounded-full ${LABEL_COLORS[task.priority]?.bg || 'bg-gray-500'}`}
+                          style={{ width: '40px' }}
+                          title={LABEL_COLORS[task.priority]?.name || task.priority}
+                        />
+                        {task.status === 'DONE' && (
+                          <span className="h-2 w-8 rounded-full bg-[#4BCE97]" title="Completed" />
+                        )}
+                      </div>
+
+                      {/* Card Title */}
+                      <div className="px-3 pb-1.5">
+                        <p className="text-sm text-[#B6C2CF] leading-snug font-medium">
+                          {task.title}
+                        </p>
+                      </div>
+
+                      {/* Card Footer: Badges + Avatar */}
+                      <div className="flex items-center justify-between px-3 pb-2.5 pt-1">
+                        <div className="flex items-center gap-2 text-[#8C9BAB]">
+                          {/* Due Date Badge */}
+                          {task.dueDate && (
+                            <span
+                              className={`flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-sm ${
+                                task.status === 'DONE'
+                                  ? 'bg-[#4BCE97]/20 text-[#4BCE97]'
+                                  : 'hover:bg-white/10'
+                              }`}
+                            >
+                              <Clock className="w-3 h-3" />
+                              {task.dueDate}
+                            </span>
+                          )}
+
+                          {/* Description indicator */}
                           {task.description && (
-                            <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">
-                              {task.description}
-                            </p>
+                            <span className="flex items-center" title="Ada deskripsi">
+                              <MessageSquare className="w-3.5 h-3.5" />
+                            </span>
                           )}
                         </div>
 
-                        {/* Assignee & Controls */}
-                        <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-indigo-600/50 border border-indigo-400 flex items-center justify-center text-[10px] font-bold text-white">
-                              {task.assignedTo.substring(0, 2).toUpperCase()}
-                            </div>
-                            <span className="text-[10px] text-gray-300 font-semibold truncate max-w-[90px]">
-                              {task.assignedTo.split(' ')[0]}
-                            </span>
+                        {/* Avatar & Move Controls */}
+                        <div className="flex items-center gap-1">
+                          {/* Move arrows (visible on hover) */}
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {colIdx > 0 && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onMoveTask(task.id, columns[colIdx - 1].id); }}
+                                className="p-1 rounded hover:bg-white/15 text-[#8C9BAB] hover:text-white transition-colors"
+                                title={`Pindah ke ${columns[colIdx - 1].title}`}
+                              >
+                                <ArrowLeft className="w-3 h-3" />
+                              </button>
+                            )}
+                            {colIdx < columns.length - 1 && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onMoveTask(task.id, columns[colIdx + 1].id); }}
+                                className="p-1 rounded hover:bg-white/15 text-[#8C9BAB] hover:text-white transition-colors"
+                                title={`Pindah ke ${columns[colIdx + 1].title}`}
+                              >
+                                <ArrowRight className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
 
-                          {/* Shift Status Controls */}
-                          <div className="flex items-center gap-1">
-                            {idx > 0 && (
-                              <button
-                                onClick={() => onMoveTask(task.id, columns[idx - 1].id)}
-                                className="touch-target p-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 text-gray-300 hover:text-white transition-colors"
-                                title="Pindah ke Kolom Sebelumnya"
-                              >
-                                <ArrowLeft className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            {idx < columns.length - 1 && (
-                              <button
-                                onClick={() => onMoveTask(task.id, columns[idx + 1].id)}
-                                className="touch-target p-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 text-gray-300 hover:text-white transition-colors"
-                                title="Pindah ke Kolom Berikutnya"
-                              >
-                                <ArrowRight className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                          {/* Assignee Avatar */}
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ml-0.5"
+                            style={{ backgroundColor: '#579DFF' }}
+                            title={task.assignedTo}
+                          >
+                            {(task.assignedTo || 'U').substring(0, 2).toUpperCase()}
                           </div>
                         </div>
                       </div>
-                    ))
+                    </div>
+                  ))}
+
+                  {/* ── Inline Add Card (Trello style) ── */}
+                  {inlineAddColumn === col.id && (
+                    <div className="rounded-lg overflow-hidden" style={{ backgroundColor: '#22272B' }}>
+                      <textarea
+                        ref={inlineInputRef}
+                        rows={3}
+                        placeholder="Masukkan judul untuk kartu ini..."
+                        value={inlineTitle}
+                        onChange={(e) => setInlineTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleInlineAdd(col.id);
+                          }
+                          if (e.key === 'Escape') {
+                            setInlineAddColumn(null);
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-transparent text-sm text-[#B6C2CF] placeholder-[#5D6B7A] focus:outline-none resize-none"
+                      />
+                      <div className="flex items-center gap-1.5 px-2 pb-2">
+                        <button
+                          onClick={() => handleInlineAdd(col.id)}
+                          className="px-3 py-1.5 rounded-[4px] text-xs font-semibold text-[#1d2125] transition-colors"
+                          style={{ backgroundColor: '#579DFF' }}
+                        >
+                          Add card
+                        </button>
+                        <button
+                          onClick={() => setInlineAddColumn(null)}
+                          className="p-1.5 rounded-[4px] hover:bg-white/10 text-[#8C9BAB] transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
+
+                {/* ── List Footer: Add Card ── */}
+                {inlineAddColumn !== col.id && (
+                  <div className="px-2 pb-2 pt-1">
+                    <button
+                      onClick={() => openInlineAdd(col.id)}
+                      className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm text-[#8C9BAB] hover:bg-white/10 hover:text-[#B6C2CF] transition-colors font-medium"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add a card
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
+
+          {/* ── "+ Add another list" column placeholder ── */}
+          <div className="shrink-0 w-[272px]">
+            <button
+              onClick={() => {
+                setAddToColumn('TODO');
+                setIsAddModalOpen(true);
+              }}
+              className="w-full flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white/70 hover:text-white transition-colors"
+              style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
+            >
+              <Plus className="w-4 h-4" />
+              Add another list
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 4. Add Trello Task Modal */}
+      {/* ─── Full Modal: Create Card with Details ─── */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-          <div className="glass-panel w-full max-w-lg p-6 rounded-3xl space-y-4 border border-indigo-500/30 my-auto">
-            <div className="flex justify-between items-center border-b border-white/10 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-400" />
-                Tambah Trello Task Card Baru
-              </h3>
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-12 sm:pt-20 p-4 overflow-y-auto"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsAddModalOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-lg rounded-xl shadow-2xl"
+            style={{ backgroundColor: '#282E33' }}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-4 pb-3">
+              <div className="flex items-center gap-3">
+                <CheckSquare className="w-5 h-5 text-[#8C9BAB] mt-0.5" />
+                <div>
+                  <h3 className="text-base font-semibold text-[#B6C2CF]">Create New Card</h3>
+                  <p className="text-xs text-[#8C9BAB] mt-0.5">
+                    {currentProject?.name || 'Project Board'}
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="touch-target text-gray-400 hover:text-white font-bold"
+                className="p-1.5 rounded-md hover:bg-white/10 text-[#8C9BAB] hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-3.5 text-xs">
+            <form onSubmit={handleFormSubmit} className="px-4 pb-4 space-y-4">
+              {/* Title */}
               <div>
-                <label className="block font-semibold text-gray-300 mb-1">Judul Task *</label>
+                <label className="block text-xs font-semibold text-[#8C9BAB] mb-1.5 uppercase tracking-wide">
+                  Title
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: Audit Hardware & Setup K3s Cluster"
+                  placeholder="Enter a title for this card..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl glass-input placeholder-gray-500 focus:outline-none"
+                  className="w-full px-3 py-2 rounded-[4px] text-sm text-[#B6C2CF] placeholder-[#5D6B7A] focus:outline-none focus:ring-2 focus:ring-[#579DFF]"
+                  style={{ backgroundColor: '#22272B', border: '1px solid rgba(255,255,255,0.1)' }}
+                  autoFocus
                 />
               </div>
 
+              {/* Description */}
               <div>
-                <label className="block font-semibold text-gray-300 mb-1">Deskripsi Pekerjaan</label>
+                <label className="block text-xs font-semibold text-[#8C9BAB] mb-1.5 uppercase tracking-wide">
+                  Description
+                </label>
                 <textarea
                   rows={3}
-                  placeholder="Detail spesifikasi teknis atau deliverable task..."
+                  placeholder="Add a more detailed description..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl glass-input placeholder-gray-500 focus:outline-none"
+                  className="w-full px-3 py-2 rounded-[4px] text-sm text-[#B6C2CF] placeholder-[#5D6B7A] focus:outline-none focus:ring-2 focus:ring-[#579DFF] resize-none"
+                  style={{ backgroundColor: '#22272B', border: '1px solid rgba(255,255,255,0.1)' }}
                 />
               </div>
 
+              {/* Row: Status + Priority */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-gray-300 mb-1">Status Initial</label>
+                  <label className="block text-xs font-semibold text-[#8C9BAB] mb-1.5 uppercase tracking-wide">
+                    List
+                  </label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as TaskColumnStatus)}
-                    className="w-full px-3.5 py-2.5 rounded-xl glass-input bg-slate-900 text-white focus:outline-none"
+                    className="w-full px-3 py-2 rounded-[4px] text-sm text-[#B6C2CF] focus:outline-none cursor-pointer"
+                    style={{ backgroundColor: '#22272B', border: '1px solid rgba(255,255,255,0.1)' }}
                   >
                     <option value="TODO">To Do</option>
                     <option value="IN_PROGRESS">In Progress</option>
-                    <option value="REVIEW">Review & QA</option>
+                    <option value="REVIEW">Review / QA</option>
                     <option value="DONE">Done</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="block font-semibold text-gray-300 mb-1">Priority Level</label>
+                  <label className="block text-xs font-semibold text-[#8C9BAB] mb-1.5 uppercase tracking-wide">
+                    Label
+                  </label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as 'LOW' | 'MEDIUM' | 'HIGH')}
-                    className="w-full px-3.5 py-2.5 rounded-xl glass-input bg-slate-900 text-white focus:outline-none"
+                    className="w-full px-3 py-2 rounded-[4px] text-sm text-[#B6C2CF] focus:outline-none cursor-pointer"
+                    style={{ backgroundColor: '#22272B', border: '1px solid rgba(255,255,255,0.1)' }}
                   >
-                    <option value="HIGH">HIGH Priority</option>
-                    <option value="MEDIUM">MEDIUM Priority</option>
-                    <option value="LOW">LOW Priority</option>
+                    <option value="HIGH">🔴 Urgent</option>
+                    <option value="MEDIUM">🟡 Medium</option>
+                    <option value="LOW">🟢 Low</option>
                   </select>
                 </div>
               </div>
 
+              {/* Row: Assigned To + Due Date */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-gray-300 mb-1">Assigned To</label>
+                  <label className="block text-xs font-semibold text-[#8C9BAB] mb-1.5 uppercase tracking-wide">
+                    Members
+                  </label>
                   <select
                     value={assignedTo}
                     onChange={(e) => setAssignedTo(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl glass-input bg-slate-900 text-white focus:outline-none"
+                    className="w-full px-3 py-2 rounded-[4px] text-sm text-[#B6C2CF] focus:outline-none cursor-pointer"
+                    style={{ backgroundColor: '#22272B', border: '1px solid rgba(255,255,255,0.1)' }}
                   >
                     {salesReps.map((rep) => (
-                      <option key={rep} value={rep}>
-                        {rep}
-                      </option>
+                      <option key={rep} value={rep}>{rep}</option>
                     ))}
                   </select>
                 </div>
-
                 <div>
-                  <label className="block font-semibold text-gray-300 mb-1">Due Date</label>
+                  <label className="block text-xs font-semibold text-[#8C9BAB] mb-1.5 uppercase tracking-wide">
+                    Due Date
+                  </label>
                   <input
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl glass-input bg-slate-900 text-white focus:outline-none"
+                    className="w-full px-3 py-2 rounded-[4px] text-sm text-[#B6C2CF] focus:outline-none"
+                    style={{ backgroundColor: '#22272B', border: '1px solid rgba(255,255,255,0.1)' }}
                   />
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="touch-target px-4 py-2 text-xs font-bold text-gray-400 hover:text-white rounded-xl hover:bg-white/10"
+                  className="px-4 py-2 rounded-[4px] text-sm font-medium text-[#B6C2CF] hover:bg-white/10 transition-colors"
                 >
-                  Batal
+                  Cancel
                 </button>
                 <button
                   type="submit"
-                  className="touch-target px-5 py-2 text-xs font-bold text-white rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-600/30"
+                  className="px-4 py-2 rounded-[4px] text-sm font-semibold text-[#1d2125] transition-all hover:brightness-110"
+                  style={{ backgroundColor: '#579DFF' }}
                 >
-                  Simpan Task Card
+                  Create card
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* ─── Custom scrollbar styles ─── */}
+      <style jsx>{`
+        .trello-scroll::-webkit-scrollbar {
+          width: 8px;
+        }
+        .trello-scroll::-webkit-scrollbar-track {
+          background: transparent;
+          border-radius: 4px;
+        }
+        .trello-scroll::-webkit-scrollbar-thumb {
+          background-color: rgba(255, 255, 255, 0.12);
+          border-radius: 4px;
+        }
+        .trello-scroll::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(255, 255, 255, 0.24);
+        }
+      `}</style>
     </div>
   );
 };
